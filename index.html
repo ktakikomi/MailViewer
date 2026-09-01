@@ -1,50 +1,318 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>OTP一覧</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disney+ OTP一覧</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0d1b3e 0%, #1e3c72 50%, #2a5298 100%);
+    overflow-x: hidden;
+    position: relative;
+    color: white;
+  }
+
+  /* きらめく星 */
+  .star {
+    position: fixed;
+    width: 3px;
+    height: 3px;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle 2.5s infinite ease-in-out;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.5); }
+  }
+
+  /* ふわふわ浮かぶ大きめの光の粒 */
+  .glow {
+    position: fixed;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,216,155,0.25) 0%, rgba(255,216,155,0) 70%);
+    animation: float 8s infinite ease-in-out;
+    pointer-events: none;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-25px); }
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 48px 24px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+  }
+
+  h2 {
+    font-size: 1.6em;
+    background: linear-gradient(90deg, #ffd89b, #ffffff, #ffd89b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .subtitle {
+    color: rgba(255,255,255,0.55);
+    font-size: 0.85em;
+    margin-bottom: 36px;
+  }
+
+  /* Googleログインボタンのラッパー */
+  #signin-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+    filter: drop-shadow(0 0 12px rgba(255,216,155,0.35));
+  }
+
+  .otp-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin: 14px 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .otp-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  .otp-card:first-child {
+    border: 1px solid rgba(255,216,155,0.5);
+    box-shadow: 0 0 20px rgba(255,216,155,0.15);
+  }
+
+  .otp-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .otp-time {
+    font-size: 0.8em;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .otp-from {
+    font-size: 0.7em;
+    color: rgba(255,255,255,0.35);
+  }
+
+  .otp-code {
+    font-size: 1.9em;
+    font-weight: bold;
+    letter-spacing: 5px;
+    color: #ffd89b;
+    cursor: pointer;
+    user-select: all;
+    transition: transform 0.15s;
+  }
+  .otp-code:active {
+    transform: scale(0.95);
+  }
+
+  .badge-new {
+    display: inline-block;
+    font-size: 0.6em;
+    background: #ffd89b;
+    color: #1e3c72;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    width: fit-content;
+  }
+
+  .status-text {
+    margin-top: 24px;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9em;
+    min-height: 1.5em;
+  }
+
+  .error-box {
+    margin-top: 24px;
+    background: rgba(255,100,100,0.12);
+    border: 1px solid rgba(255,100,100,0.4);
+    border-radius: 12px;
+    padding: 16px;
+    color: #ffb3b3;
+    font-size: 0.9em;
+  }
+
+  .footer-note {
+    margin-top: 40px;
+    font-size: 0.7em;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .copied-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #ffd89b;
+    color: #1e3c72;
+    padding: 10px 22px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9em;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .copied-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,216,155,0.3);
+    border-top-color: #ffd89b;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
 </head>
-<body style="font-family:sans-serif; max-width:500px; margin:40px auto;">
-  <h2>メールボックスをあさってワンタイムパスワードっぽい文字列を抜き出す。</h2>
+<body>
 
-  <div id="g_id_onload"
-       data-client_id="126227866579-60qfbjv5jmqq8jpquoh7dg0k7p74lr1t.apps.googleusercontent.com"
-       data-callback="handleCredentialResponse">
+<div id="stars"></div>
+
+<div class="container">
+  <h2>✨ Disney+ ワンタイムパスコード ✨</h2>
+  <div class="subtitle">最新3件をお届けします</div>
+
+  <div id="signin-wrapper">
+    <div id="g_id_onload"
+         data-client_id="126227866579-60qfbjv5jmqq8jpquoh7dg0k7p74lr1t.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse">
+    </div>
+    <div class="g_id_signin" data-type="standard" data-theme="filled_black" data-size="large" data-shape="pill"></div>
   </div>
-  <div class="g_id_signin" data-type="standard"></div>
 
-  <div id="result" style="margin-top:20px;"></div>
+  <div class="status-text" id="status"></div>
+  <div id="result"></div>
 
-  <script>
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx0LUrAnEfRrV67qLIVXrMyE2xkP8TsFZu39GJnAWpHdCWcrOUcJw6AHjPqwk6MFEiPeQ/exec';
+  <div class="footer-note">🏰 家族専用ページ &middot; URLの取り扱いにご注意ください</div>
+</div>
 
-    function handleCredentialResponse(response) {
-      // responseにはGoogleが署名したIDトークンが入っている
-      document.getElementById('result').innerText = '認証中...';
+<div class="copied-toast" id="toast">✨ コピーしました！</div>
 
-      fetch(GAS_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' }, // GAS doPostの制約回避のためtext/plainで送るのが定石
-        body: JSON.stringify({ idToken: response.credential })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          document.getElementById('result').innerText = 'エラー: ' + data.error;
-          return;
-        }
-        let html = '<table border="1" cellpadding="8"><tr><th>日時</th><th>送信元</th><th>OTP</th></tr>';
-        data.results.forEach(r => {
-          html += `<tr><td>${r.timestamp}</td><td>${r.from}</td><td style="font-size:1.3em;font-weight:bold;">${r.otp}</td></tr>`;
-        });
-        html += '</table>';
-        document.getElementById('result').innerHTML = html;
-      })
-      .catch(err => {
-        document.getElementById('result').innerText = '通信エラー: ' + err;
+<script>
+  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbx0LUrAnEfRrV67qLIVXrMyE2xkP8TsFZu39GJnAWpHdCWcrOUcJw6AHjPqwk6MFEiPeQ/exec';
+
+  // 星を散りばめる
+  const starsContainer = document.getElementById('stars');
+  for (let i = 0; i < 50; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + 'vw';
+    star.style.top = Math.random() * 100 + 'vh';
+    star.style.animationDelay = Math.random() * 2.5 + 's';
+    starsContainer.appendChild(star);
+  }
+  // ふわふわ光の粒
+  for (let i = 0; i < 5; i++) {
+    const glow = document.createElement('div');
+    glow.className = 'glow';
+    const size = 120 + Math.random() * 120;
+    glow.style.width = size + 'px';
+    glow.style.height = size + 'px';
+    glow.style.left = Math.random() * 100 + 'vw';
+    glow.style.top = Math.random() * 100 + 'vh';
+    glow.style.animationDelay = Math.random() * 8 + 's';
+    starsContainer.appendChild(glow);
+  }
+
+  function setStatus(text) {
+    document.getElementById('status').innerHTML = text;
+  }
+
+  function handleCredentialResponse(response) {
+    document.getElementById('result').innerHTML = '';
+    setStatus('<span class="spinner"></span>魔法をかけています...');
+
+    fetch(GAS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ idToken: response.credential })
+    })
+    .then(res => res.json())
+    .then(data => {
+      setStatus('');
+      if (data.error) {
+        document.getElementById('result').innerHTML =
+          `<div class="error-box">⚠️ ${data.error}</div>`;
+        return;
+      }
+      if (!data.results || data.results.length === 0) {
+        document.getElementById('result').innerHTML =
+          `<div class="error-box">最近のワンタイムパスコードが見つかりませんでした。</div>`;
+        return;
+      }
+
+      let html = '';
+      data.results.forEach((r, i) => {
+        html += `
+          <div class="otp-card">
+            <div class="otp-left">
+              ${i === 0 ? '<div class="badge-new">最新</div>' : ''}
+              <div class="otp-time">🕐 ${r.timestamp}</div>
+              <div class="otp-from">${r.from}</div>
+            </div>
+            <div class="otp-code" onclick="copyOTP('${r.otp}')" title="タップでコピー">${r.otp}</div>
+          </div>`;
       });
-    }
-  </script>
+      document.getElementById('result').innerHTML = html;
+    })
+    .catch(err => {
+      setStatus('');
+      document.getElementById('result').innerHTML =
+        `<div class="error-box">通信エラー: ${err}</div>`;
+    });
+  }
+
+  function copyOTP(code) {
+    navigator.clipboard.writeText(code).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+    });
+  }
+</script>
+
 </body>
 </html>
