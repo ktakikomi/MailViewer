@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Disney+ OTP一覧</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body style="font-family:sans-serif; max-width:500px; margin:40px auto;">
+  <h2>Disney+ OTP一覧</h2>
+
+  <div id="g_id_onload"
+       data-client_id="ここに手順1のクライアントIDを貼る"
+       data-callback="handleCredentialResponse">
+  </div>
+  <div class="g_id_signin" data-type="standard"></div>
+
+  <div id="result" style="margin-top:20px;"></div>
+
+  <script>
+    const GAS_API_URL = 'ここにGASのWebアプリURL(/exec)を貼る';
+
+    function handleCredentialResponse(response) {
+      // responseにはGoogleが署名したIDトークンが入っている
+      document.getElementById('result').innerText = '認証中...';
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' }, // GAS doPostの制約回避のためtext/plainで送るのが定石
+        body: JSON.stringify({ idToken: response.credential })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('result').innerText = 'エラー: ' + data.error;
+          return;
+        }
+        let html = '<table border="1" cellpadding="8"><tr><th>日時</th><th>送信元</th><th>OTP</th></tr>';
+        data.results.forEach(r => {
+          html += `<tr><td>${r.timestamp}</td><td>${r.from}</td><td style="font-size:1.3em;font-weight:bold;">${r.otp}</td></tr>`;
+        });
+        html += '</table>';
+        document.getElementById('result').innerHTML = html;
+      })
+      .catch(err => {
+        document.getElementById('result').innerText = '通信エラー: ' + err;
+      });
+    }
+  </script>
+</body>
+</html>
